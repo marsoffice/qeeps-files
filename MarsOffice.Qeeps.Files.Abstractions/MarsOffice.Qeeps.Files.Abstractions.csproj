@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>MarsOffice.Qeeps.Files.Abstractions</PackageId>
+    <Authors>marsoffice</Authors>
+    <Company>marsoffice</Company>
+    <PackageDescription>marsoffice</PackageDescription>
+    <RepositoryUrl>https://github.com/marsoffice/qeeps-files</RepositoryUrl>
+ 
+  </PropertyGroup>
+
+</Project>
