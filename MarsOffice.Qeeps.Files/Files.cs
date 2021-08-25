@@ -33,8 +33,7 @@ namespace MarsOffice.Qeeps.Files
             var blobContainerReference = blobClient.GetContainerReference("userfiles");
 
 #if DEBUG
-            blobContainerReference.SetPermissions(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Blob });
-            await blobContainerReference.CreateIfNotExistsAsync();
+            await blobContainerReference.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, null, null);
 #endif
             var principal = QeepsPrincipal.Parse(req);
             var uid = principal.FindFirstValue("id");
