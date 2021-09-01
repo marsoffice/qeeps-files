@@ -34,17 +34,14 @@ namespace MarsOffice.Qeeps.Files
             {
                 var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
                 var blobContainerReference = blobClient.GetContainerReference("userfiles");
-
 #if DEBUG
                 await blobContainerReference.CreateIfNotExistsAsync();
 #endif
                 var principal = QeepsPrincipal.Parse(req);
                 var uid = principal.FindFirstValue("id");
-
                 await req.ReadFormAsync();
                 var guid = Guid.NewGuid().ToString();
                 var dtos = new List<FileDto>();
-
                 foreach (var file in req.Form.Files)
                 {
                     try
@@ -74,10 +71,7 @@ namespace MarsOffice.Qeeps.Files
             catch (Exception e)
             {
                 log.LogError(e, "Exception occured in function");
-                return new ObjectResult(e.Message)
-                {
-                    StatusCode = (int)HttpStatusCode.InternalServerError
-                };
+                return new BadRequestObjectResult(Errors.Extract(e));
             }
         }
 
@@ -91,7 +85,6 @@ namespace MarsOffice.Qeeps.Files
             {
                 var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
                 var blobContainerReference = blobClient.GetContainerReference("userfiles");
-
 #if DEBUG
                 await blobContainerReference.CreateIfNotExistsAsync();
 #endif
@@ -108,11 +101,9 @@ namespace MarsOffice.Qeeps.Files
                 {
                     fileName = "download";
                 }
-
                 req.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 req.HttpContext.Response.Headers.TryAdd("Content-Disposition", $"attachment; filename=\"{fileName}\"");
                 req.HttpContext.Response.Headers.TryAdd("Content-Type", $"application/octet-stream");
-
                 using var readStream = await blobReference.OpenReadAsync();
                 await readStream.CopyToAsync(req.HttpContext.Response.Body);
                 await req.HttpContext.Response.Body.FlushAsync();
@@ -121,10 +112,7 @@ namespace MarsOffice.Qeeps.Files
             catch (Exception e)
             {
                 log.LogError(e, "Exception occured in function");
-                return new ObjectResult(e.Message)
-                {
-                    StatusCode = (int)HttpStatusCode.InternalServerError
-                };
+                return new BadRequestObjectResult(Errors.Extract(e));
             }
         }
     }
