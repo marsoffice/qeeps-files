@@ -30,79 +30,102 @@ namespace MarsOffice.Qeeps.Files
             ILogger log
             )
         {
-            var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
-            var blobContainerReference = blobClient.GetContainerReference("userfiles");
+            try
+            {
+                var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
+                var blobContainerReference = blobClient.GetContainerReference("userfiles");
 
 #if DEBUG
-            await blobContainerReference.CreateIfNotExistsAsync();
+                await blobContainerReference.CreateIfNotExistsAsync();
 #endif
-            var principal = QeepsPrincipal.Parse(req);
-            var uid = principal.FindFirstValue("id");
+                var principal = QeepsPrincipal.Parse(req);
+                var uid = principal.FindFirstValue("id");
 
-            await req.ReadFormAsync();
-            var guid = Guid.NewGuid().ToString();
-            var dtos = new List<FileDto>();
+                await req.ReadFormAsync();
+                var guid = Guid.NewGuid().ToString();
+                var dtos = new List<FileDto>();
 
-            foreach (var file in req.Form.Files)
-            {
-                try
+                foreach (var file in req.Form.Files)
                 {
-                    var fileId = Guid.NewGuid().ToString();
-                    var fileRef = blobContainerReference.GetBlockBlobReference($"{uid}/{guid}_{fileId}");
-                    using var readStream = file.OpenReadStream();
-                    await fileRef.UploadFromStreamAsync(readStream);
-                    fileRef.Metadata.Add("filename", WebUtility.UrlEncode(file.FileName));
-                    fileRef.Metadata.Add("sizeinbytes", file.Length.ToString());
-                    await fileRef.SetMetadataAsync();
-                    dtos.Add(new FileDto
+                    try
                     {
-                        Filename = file.FileName,
-                        SizeInBytes = file.Length,
-                        UserId = uid,
-                        Id = guid + "_" + fileId
-                    });
+                        var fileId = Guid.NewGuid().ToString();
+                        var fileRef = blobContainerReference.GetBlockBlobReference($"{uid}/{guid}_{fileId}");
+                        using var readStream = file.OpenReadStream();
+                        await fileRef.UploadFromStreamAsync(readStream);
+                        fileRef.Metadata.Add("filename", WebUtility.UrlEncode(file.FileName));
+                        fileRef.Metadata.Add("sizeinbytes", file.Length.ToString());
+                        await fileRef.SetMetadataAsync();
+                        dtos.Add(new FileDto
+                        {
+                            Filename = file.FileName,
+                            SizeInBytes = file.Length,
+                            UserId = uid,
+                            Id = guid + "_" + fileId
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        log.LogError(ex, $"File upload failed: {file.FileName}; uid: {uid}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    log.LogError(ex, $"File upload failed: {file.FileName}; uid: {uid}");
-                }
+                return new OkObjectResult(dtos);
             }
-            return new OkObjectResult(dtos);
+            catch (Exception e)
+            {
+                log.LogError(e, "Exception occured in function");
+                return new ObjectResult(e.Message)
+                {
+                    StatusCode = (int)HttpStatusCode.InternalServerError
+                };
+            }
         }
 
         [FunctionName("Download")]
         public async Task<IActionResult> Download(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{uid}/{fileId}")] HttpRequest req
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{uid}/{fileId}")] HttpRequest req,
+            ILogger log
             )
         {
-            var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
-            var blobContainerReference = blobClient.GetContainerReference("userfiles");
+            try
+            {
+                var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
+                var blobContainerReference = blobClient.GetContainerReference("userfiles");
 
 #if DEBUG
-            await blobContainerReference.CreateIfNotExistsAsync();
+                await blobContainerReference.CreateIfNotExistsAsync();
 #endif
-            var uid = req.RouteValues["uid"].ToString();
-            var fileId = req.RouteValues["fileId"].ToString();
-            var blobReference = blobContainerReference.GetBlobReference($"{uid}/{fileId}");
-            if (!await blobReference.ExistsAsync())
-            {
-                
-                return new NotFoundResult();
-            }
-            var fileName = blobReference.Metadata["filename"];
-            if (string.IsNullOrEmpty(fileName))
-            {
-                fileName = "download";
-            }
+                var uid = req.RouteValues["uid"].ToString();
+                var fileId = req.RouteValues["fileId"].ToString();
+                var blobReference = blobContainerReference.GetBlobReference($"{uid}/{fileId}");
+                if (!await blobReference.ExistsAsync())
+                {
 
-            req.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            req.HttpContext.Response.Headers.TryAdd("Content-Disposition", $"attachment; filename=\"{fileName}\"");
-            req.HttpContext.Response.Headers.TryAdd("Content-Type", $"application/octet-stream");
+                    return new NotFoundResult();
+                }
+                var fileName = blobReference.Metadata["filename"];
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    fileName = "download";
+                }
 
-            using var readStream = await blobReference.OpenReadAsync();
-            await readStream.CopyToAsync(req.HttpContext.Response.Body);
-            await req.HttpContext.Response.Body.FlushAsync();
-            return new EmptyResult();
+                req.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                req.HttpContext.Response.Headers.TryAdd("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+                req.HttpContext.Response.Headers.TryAdd("Content-Type", $"application/octet-stream");
+
+                using var readStream = await blobReference.OpenReadAsync();
+                await readStream.CopyToAsync(req.HttpContext.Response.Body);
+                await req.HttpContext.Response.Body.FlushAsync();
+                return new EmptyResult();
+            }
+            catch (Exception e)
+            {
+                log.LogError(e, "Exception occured in function");
+                return new ObjectResult(e.Message)
+                {
+                    StatusCode = (int)HttpStatusCode.InternalServerError
+                };
+            }
         }
     }
 }
