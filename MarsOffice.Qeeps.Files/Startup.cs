@@ -1,9 +1,9 @@
 using System;
 using System.IO;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Azure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.WindowsAzure.Storage;
 
 [assembly: FunctionsStartup(typeof(MarsOffice.Qeeps.Files.Startup))]
 namespace MarsOffice.Qeeps.Files
