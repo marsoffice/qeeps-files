@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 
@@ -17,10 +18,12 @@ namespace MarsOffice.Qeeps.Files
     public class Files
     {
         private readonly CloudStorageAccount _cloudStorageAccount;
+        private readonly IConfiguration _config;
 
-        public Files(CloudStorageAccount cloudStorageAccount)
+        public Files(CloudStorageAccount cloudStorageAccount, IConfiguration config)
         {
             _cloudStorageAccount = cloudStorageAccount;
+            _config = config;
         }
 
         [FunctionName("Upload")]
@@ -31,6 +34,7 @@ namespace MarsOffice.Qeeps.Files
         {
             try
             {
+                var locationLower = _config["location"].Replace(" ", "").ToLower();
                 var blobClient = _cloudStorageAccount.CreateCloudBlobClient();
                 var blobContainerReference = blobClient.GetContainerReference("userfiles");
 #if DEBUG
@@ -46,7 +50,7 @@ namespace MarsOffice.Qeeps.Files
                     try
                     {
                         var fileId = Guid.NewGuid().ToString();
-                        var fileRef = blobContainerReference.GetBlockBlobReference($"{uid}/{guid}_{fileId}");
+                        var fileRef = blobContainerReference.GetBlockBlobReference($"{locationLower}/{uid}/{guid}_{fileId}");
                         using var readStream = file.OpenReadStream();
                         await fileRef.UploadFromStreamAsync(readStream);
                         fileRef.Metadata.Add("filename", WebUtility.UrlEncode(file.FileName));
@@ -57,7 +61,9 @@ namespace MarsOffice.Qeeps.Files
                             Filename = file.FileName,
                             SizeInBytes = file.Length,
                             UserId = uid,
-                            Id = guid + "_" + fileId
+                            UploadSessionId = guid,
+                            FileId = fileId,
+                            Location = locationLower
                         });
                     }
                     catch (Exception ex)
@@ -76,7 +82,7 @@ namespace MarsOffice.Qeeps.Files
 
         [FunctionName("Download")]
         public async Task<IActionResult> Download(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{uid}/{fileId}")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{location}/{uid}/{fileId}")] HttpRequest req,
             ILogger log
             )
         {
@@ -89,7 +95,8 @@ namespace MarsOffice.Qeeps.Files
 #endif
                 var uid = req.RouteValues["uid"].ToString();
                 var fileId = req.RouteValues["fileId"].ToString();
-                var blobReference = blobContainerReference.GetBlobReference($"{uid}/{fileId}");
+                var location = req.RouteValues["location"].ToString();
+                var blobReference = blobContainerReference.GetBlobReference($"{location}/{uid}/{fileId}");
                 if (!await blobReference.ExistsAsync())
                 {
 
