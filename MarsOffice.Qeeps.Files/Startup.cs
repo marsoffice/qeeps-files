@@ -23,10 +23,7 @@ namespace MarsOffice.Qeeps.Files
         public override void Configure(IFunctionsHostBuilder builder)
         {
             var config = builder.GetContext().Configuration;
-            builder.Services.AddSingleton(_ =>
-            {
-                return CloudStorageAccount.Parse(config["localsaconnectionstring"]);
-            });
+
         }
     }
 }

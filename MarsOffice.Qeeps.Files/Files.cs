@@ -17,12 +17,10 @@ namespace MarsOffice.Qeeps.Files
 {
     public class Files
     {
-        private readonly CloudStorageAccount _cloudStorageAccount;
         private readonly IConfiguration _config;
 
-        public Files(CloudStorageAccount cloudStorageAccount, IConfiguration config)
+        public Files(IConfiguration config)
         {
-            _cloudStorageAccount = cloudStorageAccount;
             _config = config;
         }
 
@@ -120,6 +118,40 @@ namespace MarsOffice.Qeeps.Files
                 log.LogError(e, "Exception occured in function");
                 return new BadRequestObjectResult(Errors.Extract(e));
             }
+        }
+
+        private IEnumerable<ConnectionStringInfo> ReadConnectionStrings()
+        {
+            var result = new List<ConnectionStringInfo>
+            {
+                new ConnectionStringInfo
+                {
+                    IsMain = true,
+                    Location = _config["location"].Replace(" ", "").ToLower(),
+                    ConnectionString = _config["localsaconnectionstring"]
+                }
+            };
+            var othersString = _config["othersaconnectionstrings"];
+            if (string.IsNullOrEmpty(othersString))
+            {
+                return result;
+            }
+            var splitByComma = othersString.Split(",");
+            foreach (var splitByCommaElement in splitByComma)
+            {
+                var splitByArrow = splitByCommaElement.Split("->");
+                if (splitByArrow.Length != 2)
+                {
+                    continue;
+                }
+                result.Add(new ConnectionStringInfo
+                {
+                    ConnectionString = splitByArrow[1],
+                    IsMain = false,
+                    Location = splitByArrow[0]
+                });
+            }
+            return result;
         }
     }
 }
