@@ -25,7 +25,7 @@ namespace MarsOffice.Qeeps.Files
             var config = builder.GetContext().Configuration;
             builder.Services.AddSingleton(_ =>
             {
-                return CloudStorageAccount.Parse(config["saconnectionstring"]);
+                return CloudStorageAccount.Parse(config["localsaconnectionstring"]);
             });
         }
     }
