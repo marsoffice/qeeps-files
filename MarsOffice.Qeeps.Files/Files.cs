@@ -33,10 +33,6 @@ namespace MarsOffice.Qeeps.Files
         {
             try
             {
-
-
-
-
                 var principal = QeepsPrincipal.Parse(req);
                 var uid = principal.FindFirstValue("id");
                 await req.ReadFormAsync();

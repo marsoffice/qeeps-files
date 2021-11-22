@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MarsOffice.Qeeps.Files": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7004"
+    }
+  }
+}
