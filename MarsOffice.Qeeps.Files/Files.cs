@@ -51,16 +51,17 @@ namespace MarsOffice.Qeeps.Files
                                 var cs = connectionStrings.ElementAt(i);
                                 var cloudStorageAccount = CloudStorageAccount.Parse(cs.ConnectionString);
                                 var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-                                var blobContainerReference = blobClient.GetContainerReference("userfiles");
+                                var blobContainerReference = blobClient.GetContainerReference(cs.Location);
 #if DEBUG
                                 await blobContainerReference.CreateIfNotExistsAsync();
 #endif
                                 var fileId = Guid.NewGuid().ToString();
-                                var fileRef = blobContainerReference.GetBlockBlobReference($"{cs.Location}/{uid}/{guid}_{fileId}");
+                                var fileRef = blobContainerReference.GetBlockBlobReference($"{uid}/{guid}_{fileId}");
                                 using var readStream = file.OpenReadStream();
                                 await fileRef.UploadFromStreamAsync(readStream);
                                 fileRef.Metadata.Add("filename", WebUtility.UrlEncode(file.FileName));
                                 fileRef.Metadata.Add("sizeinbytes", file.Length.ToString());
+                                fileRef.Metadata.Add("location", cs.Location);
                                 await fileRef.SetMetadataAsync();
                                 dtos.Add(new FileDto
                                 {
@@ -102,12 +103,16 @@ namespace MarsOffice.Qeeps.Files
 
         [FunctionName("Download")]
         public async Task<IActionResult> Download(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{location}/{uid}/{fileId}")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "api/files/download/{location}/{uid}/{uploadSessionId}/{fileId}")] HttpRequest req,
             ILogger log
             )
         {
             try
             {
+                var uid = req.RouteValues["uid"].ToString();
+                var fileId = req.RouteValues["fileId"].ToString();
+                var location = req.RouteValues["location"].ToString();
+                var uploadSessionId = req.RouteValues["uploadSessionId"].ToString();
                 var connectionStrings = ReadConnectionStrings();
                 for (var i = 0; i < connectionStrings.Count(); i++)
                 {
@@ -116,14 +121,11 @@ namespace MarsOffice.Qeeps.Files
                         var cs = connectionStrings.ElementAt(i);
                         var cloudStorageAccount = CloudStorageAccount.Parse(cs.ConnectionString);
                         var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-                        var blobContainerReference = blobClient.GetContainerReference("userfiles");
+                        var blobContainerReference = blobClient.GetContainerReference(cs.Location);
 #if DEBUG
                         await blobContainerReference.CreateIfNotExistsAsync();
 #endif
-                        var uid = req.RouteValues["uid"].ToString();
-                        var fileId = req.RouteValues["fileId"].ToString();
-                        var location = req.RouteValues["location"].ToString();
-                        var blobReference = blobContainerReference.GetBlobReference($"{location}/{uid}/{fileId}");
+                        var blobReference = blobContainerReference.GetBlobReference($"{uid}/{uploadSessionId}_{fileId}");
                         if (!await blobReference.ExistsAsync())
                         {
                             if (i < connectionStrings.Count() - 1)
