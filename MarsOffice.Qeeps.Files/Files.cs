@@ -34,7 +34,16 @@ namespace MarsOffice.Qeeps.Files
             try
             {
                 var principal = QeepsPrincipal.Parse(req);
-                var uid = principal.FindFirstValue("id");
+                string uid;
+                if (principal.FindFirstValue("roles") != "Application")
+                {
+                    uid = principal.FindFirstValue("id");
+                }
+                else
+                {
+                    uid = principal.FindFirstValue(ClaimTypes.Name);
+                }
+
                 await req.ReadFormAsync();
                 var guid = Guid.NewGuid().ToString();
                 var dtos = new List<FileDto>();
