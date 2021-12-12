@@ -25,6 +25,89 @@ namespace MarsOffice.Qeeps.Files
             _config = config;
         }
 
+        [FunctionName("UploadFromService")]
+        public async Task<IActionResult> UploadFromService(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/files/upload")] HttpRequest req,
+            ILogger log,
+            ClaimsPrincipal principal
+            )
+        {
+            try
+            {
+                var env = Environment.GetEnvironmentVariable("AZURE_FUNCTIONS_ENVIRONMENT") ?? "Development";
+                if (env != "Development" && principal.FindFirstValue("roles") != "Application")
+                {
+                    return new StatusCodeResult(401);
+                }
+
+                var path = req.Query["path"].ToString();
+
+                await req.ReadFormAsync();
+                var dtos = new List<FileDto>();
+
+                var connectionStrings = ReadConnectionStrings();
+                foreach (var file in req.Form.Files)
+                {
+                    try
+                    {
+                        for (var i = 0; i < connectionStrings.Count(); i++)
+                        {
+                            try
+                            {
+                                var cs = connectionStrings.ElementAt(i);
+                                var cloudStorageAccount = CloudStorageAccount.Parse(cs.ConnectionString);
+                                var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+                                var blobContainerReference = blobClient.GetContainerReference(cs.Location);
+#if DEBUG
+                                await blobContainerReference.CreateIfNotExistsAsync();
+#endif
+                                var fileId = Guid.NewGuid().ToString();
+                                var fileRef = blobContainerReference.GetBlockBlobReference(path);
+                                using var readStream = file.OpenReadStream();
+                                await fileRef.UploadFromStreamAsync(readStream);
+                                fileRef.Metadata.Add("filename", WebUtility.UrlEncode(file.FileName));
+                                fileRef.Metadata.Add("sizeinbytes", file.Length.ToString());
+                                fileRef.Metadata.Add("location", cs.Location);
+                                await fileRef.SetMetadataAsync();
+                                dtos.Add(new FileDto
+                                {
+                                    Filename = file.FileName,
+                                    SizeInBytes = file.Length,
+                                    UserId = null,
+                                    UploadSessionId = null,
+                                    FileId = fileId,
+                                    Location = cs.Location,
+                                    Path = path
+                                });
+                                break;
+                            }
+                            catch (Exception)
+                            {
+                                if (i < connectionStrings.Count() - 1)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    throw;
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        log.LogError(ex, $"File upload failed: {file.FileName}");
+                    }
+                }
+                return new OkObjectResult(dtos);
+            }
+            catch (Exception e)
+            {
+                log.LogError(e, "Exception occured in function");
+                return new BadRequestObjectResult(Errors.Extract(e));
+            }
+        }
+
         [FunctionName("Upload")]
         public async Task<IActionResult> Upload(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/files/upload")] HttpRequest req,
@@ -79,7 +162,8 @@ namespace MarsOffice.Qeeps.Files
                                     UserId = uid,
                                     UploadSessionId = guid,
                                     FileId = fileId,
-                                    Location = cs.Location
+                                    Location = cs.Location,
+                                    Path = $"{uid}/{guid}_{fileId}"
                                 });
                                 break;
                             }

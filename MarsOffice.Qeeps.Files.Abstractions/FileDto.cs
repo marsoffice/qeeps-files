@@ -10,6 +10,7 @@ namespace MarsOffice.Qeeps.Files.Abstractions
         public string UserId { get; set; }
         public string UploadSessionId { get; set; }
         public string Filename { get; set; }
+        public string Path { get; set; }
         public long SizeInBytes { get; set; }
     }
 }
