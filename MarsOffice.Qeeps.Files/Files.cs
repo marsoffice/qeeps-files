@@ -27,7 +27,7 @@ namespace MarsOffice.Qeeps.Files
 
         [FunctionName("UploadFromService")]
         public async Task<IActionResult> UploadFromService(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/files/upload")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "api/files/uploadFromService")] HttpRequest req,
             ILogger log,
             ClaimsPrincipal principal
             )
