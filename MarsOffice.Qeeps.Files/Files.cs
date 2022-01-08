@@ -4,8 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using MarsOffice.Microfunction;
 using MarsOffice.Qeeps.Files.Abstractions;
-using MarsOffice.Qeeps.Microfunction;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -116,7 +116,7 @@ namespace MarsOffice.Qeeps.Files
         {
             try
             {
-                var principal = QeepsPrincipal.Parse(req);
+                var principal = MarsOfficePrincipal.Parse(req);
                 string uid;
                 if (principal.FindFirstValue("roles") != "Application")
                 {

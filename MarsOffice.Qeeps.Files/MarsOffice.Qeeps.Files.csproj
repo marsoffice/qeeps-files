@@ -10,13 +10,11 @@
 		<ProjectReference Include="../MarsOffice.Qeeps.Files.Abstractions/MarsOffice.Qeeps.Files.Abstractions.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="MarsOffice.Qeeps.Microfunction" Version="2.0.0-dev.18" />
+		<PackageReference Include="MarsOffice.Microfunction" Version="3.0.0" />
 		<PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventGrid" Version="2.1.0" />
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
 		<PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
-		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.CosmosDB" Version="3.0.10" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="host.json">
